@@ -5,6 +5,23 @@ import { readFileSync } from 'node:fs';
 import process from 'node:process';
 import { uIOhook, UiohookKey } from 'uiohook-napi';
 
+function parseArgs() {
+    const args = process.argv.slice(2);
+    const inputArgs = [];
+    let debug = false;
+
+    for (const arg of args) {
+        if (arg === '--debug') {
+            debug = true;
+            continue;
+        }
+
+        inputArgs.push(arg);
+    }
+
+    return { debug, inputArgs };
+}
+
 function readStdin() {
     return new Promise(resolve => {
         let data = '';
@@ -34,6 +51,10 @@ function setClipboard(text) {
     if (result.error) {
         throw result.error;
     }
+
+    if (result.status !== 0) {
+        throw new Error(result.stderr || 'pbcopy failed.');
+    }
 }
 
 function getClipboard() {
@@ -41,16 +62,14 @@ function getClipboard() {
         encoding: 'utf8',
     });
 
-    if (result.error) {
+    if (result.error || result.status !== 0) {
         return '';
     }
 
     return result.stdout ?? '';
 }
 
-async function getInput() {
-    const args = process.argv.slice(2);
-
+async function getInput(args) {
     if (args.length > 0) {
         const first = args[0];
 
@@ -92,10 +111,12 @@ function parseItems(raw) {
     return parsed;
 }
 
-const rawInput = await getInput();
+const { debug, inputArgs } = parseArgs();
+const rawInput = await getInput(inputArgs);
 
 if (!rawInput) {
     console.error('Usage: node index.js \'["A", "B", "C"]\'');
+    console.error('Debug: node index.js --debug \'["A", "B", "C"]\'');
     console.error('   or: cat snippets.json | node index.js');
     console.error('   or: node index.js snippets.json');
     process.exit(1);
@@ -105,6 +126,8 @@ const items = parseItems(rawInput);
 
 let index = 0;
 let lastPasteAt = 0;
+let pendingPaste = false;
+let pasteFallbackTimer = null;
 const originalClipboard = getClipboard();
 
 function currentLabel() {
@@ -121,6 +144,19 @@ function moveToNextItem() {
     primeClipboard();
 }
 
+function advanceAfterPaste(delayMs) {
+    pendingPaste = false;
+
+    if (pasteFallbackTimer !== null) {
+        clearTimeout(pasteFallbackTimer);
+        pasteFallbackTimer = null;
+    }
+
+    setTimeout(() => {
+        moveToNextItem();
+    }, delayMs);
+}
+
 function restoreAndExit(code = 0) {
     try {
         setClipboard(originalClipboard);
@@ -128,10 +164,6 @@ function restoreAndExit(code = 0) {
     } catch {
         console.error('\nCould not restore clipboard.');
     }
-
-    try {
-        uIOhook.stop();
-    } catch {}
 
     process.exit(code);
 }
@@ -145,8 +177,24 @@ console.log('paste-cycle active.');
 console.log('Press Cmd + V anywhere to paste/cycle.');
 console.log('Press Ctrl + C here to stop.\n');
 
+function isVKey(event) {
+    return event.keycode === UiohookKey.V;
+}
+
+function logKeyEvent(name, event) {
+    if (!debug) {
+        return;
+    }
+
+    console.log(
+        `[debug] ${name}: keycode=${event.keycode} meta=${event.metaKey} ctrl=${event.ctrlKey} alt=${event.altKey} shift=${event.shiftKey}`,
+    );
+}
+
 uIOhook.on('keydown', event => {
-    const isCommandV = event.metaKey === true && event.keycode === UiohookKey.V;
+    logKeyEvent('keydown', event);
+
+    const isCommandV = event.metaKey === true && isVKey(event);
 
     if (!isCommandV) {
         return;
@@ -159,14 +207,40 @@ uIOhook.on('keydown', event => {
         return;
     }
 
-    lastPasteAt = now;
+    if (pendingPaste) {
+        return;
+    }
 
-    // Important:
-    // Let the current Cmd+V paste the already primed clipboard.
-    // Then prepare the next item shortly after.
-    setTimeout(() => {
-        moveToNextItem();
-    }, 120);
+    lastPasteAt = now;
+    pendingPaste = true;
+
+    if (debug) {
+        console.log('[debug] Cmd+V detected.');
+    }
+
+    pasteFallbackTimer = setTimeout(() => {
+        if (pendingPaste) {
+            advanceAfterPaste(0);
+        }
+    }, 450);
 });
 
-uIOhook.start();
+uIOhook.on('keyup', event => {
+    logKeyEvent('keyup', event);
+
+    if (!pendingPaste || !isVKey(event)) {
+        return;
+    }
+
+    // Let the application finish handling Cmd+V before replacing the clipboard.
+    advanceAfterPaste(80);
+});
+
+try {
+    uIOhook.start();
+} catch (error) {
+    console.error('Could not start keyboard hook.');
+    console.error(error instanceof Error ? error.message : String(error));
+    console.error('On macOS, allow your terminal app in Accessibility and Input Monitoring.');
+    restoreAndExit(1);
+}
