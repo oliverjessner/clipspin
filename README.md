@@ -1,8 +1,10 @@
 # ClipSpin
 
-- cycle your paste queue with every CMD+V.
+- A temporary second paste queue for macOS.
 
-Du startest Clipspin im Terminal mit einer JSON-Liste aus Texten. Solange der Command läuft, reagiert ClipSpin auf `Cmd+V`: Beim ersten Einfügen wird der erste Text aus der Liste verwendet, beim nächsten `Cmd+V` der zweite, danach der dritte und so weiter. Am Ende der Liste springt ClipSpin wieder zurück zum Anfang.
+ClipSpin lets you start a temporary text queue from the terminal. While ClipSpin is running, press `Option+V` to insert the next text from the queue. After each insert, ClipSpin advances to the next item. When the end of the list is reached, it starts again from the beginning.
+
+ClipSpin does **not** use or overwrite your normal macOS clipboard. Your regular `Cmd+V` clipboard stays untouched.
 
 ## Installation
 
@@ -10,40 +12,100 @@ Du startest Clipspin im Terminal mit einer JSON-Liste aus Texten. Solange der Co
 brew install oliverjessner/tap/clipspin
 ```
 
-ClipSpin nutzt einen globalen Keyboard-Hook. Falls `Cmd+V` nicht erkannt wird, erlaube deiner Terminal-App unter **Systemeinstellungen -> Datenschutz & Sicherheit -> Bedienungshilfen** den Zugriff. Je nach System kann auch **Eingabeüberwachung** nötig sein.
+ClipSpin uses a native macOS event tap to detect and intercept `Option+V`. On first use, macOS may require accessibility permissions.
 
-## Verwendung
+If `Option+V` is not detected, allow ClipSpin or your terminal app under:
+
+**System Settings -> Privacy & Security -> Accessibility**
+
+Depending on your macOS version, **Input Monitoring** may also be required.
+
+## Usage
 
 Inline:
 
 ```bash
-clipspin '["Erster Text", "Zweiter Text", "Dritter Text"]'
+clipspin '["First text", "Second text", "Third text"]'
 ```
 
-Aus einer Datei:
+From a file:
 
 ```bash
 clipspin snippets.json
 ```
 
-Per Pipe:
-
-```bash
-cat snippets.json | clipspin
-```
-
-`snippets.json` muss ein JSON-Array aus Strings enthalten:
+`snippets.json` must contain a JSON array of strings:
 
 ```json
-["Erster Text", "Zweiter Text", "Dritter Text"]
+["First text", "Second text", "Third text"]
 ```
 
-Stoppen kannst du ClipSpin mit `Ctrl+C` im Terminal. Die vorherige Zwischenablage wird danach wiederhergestellt.
+## How it works
 
-Wenn `Cmd+V` nicht erkannt wird, starte ClipSpin im Debug-Modus:
+Start ClipSpin with a JSON array of strings:
 
 ```bash
-clipspin --debug '["Erster Text", "Zweiter Text"]'
+clipspin '["First text", "Second text", "Third text"]'
 ```
 
-Beim Drücken von Tasten sollten dann `[debug]`-Zeilen erscheinen. Wenn keine erscheinen, fehlen macOS-Berechtigungen für die Terminal-App.
+Then click into any text field and press:
+
+```text
+Option+V
+```
+
+The first press inserts:
+
+```text
+First text
+```
+
+The next press inserts:
+
+```text
+Second text
+```
+
+The next press inserts:
+
+```text
+Third text
+```
+
+After the last item, ClipSpin jumps back to the first item.
+
+## Stopping ClipSpin
+
+Stop ClipSpin with `Ctrl+C` in the terminal.
+
+Because ClipSpin does not modify your normal clipboard, there is no clipboard content to restore after stopping.
+
+## Permissions
+
+ClipSpin needs macOS permissions because it listens for a global keyboard shortcut and blocks the default `Option+V` behavior.
+
+Without these permissions, macOS may still insert the default `Option+V` character, such as:
+
+```text
+√
+```
+
+To fix this, allow ClipSpin or your terminal app under:
+
+```text
+System Settings -> Privacy & Security -> Accessibility
+```
+
+If it still does not work, also check:
+
+```text
+System Settings -> Privacy & Security -> Input Monitoring
+```
+
+After changing permissions, restart the terminal and start ClipSpin again.
+
+## Notes
+
+ClipSpin is currently macOS-only.
+
+It is designed for temporary paste queues, for example when you need to insert a fixed list of snippets one after another without constantly switching back to your clipboard manager.
