@@ -1,0 +1,34 @@
+{
+    "name": "ClipSpin",
+    "version": "0.1.0",
+    "description": "A temporary macOS clipboard cycler CLI that iterates through JSON text snippets on every Cmd+V.",
+    "type": "module",
+    "bin": {
+        "clipspin": "./index.js"
+    },
+    "scripts": {
+        "start": "node index.js",
+        "dev": "node index.js",
+        "lint": "node --check index.js"
+    },
+    "keywords": [
+        "clipboard",
+        "paste",
+        "macos",
+        "cli",
+        "snippet",
+        "cmd-v",
+        "productivity"
+    ],
+    "author": "Oliver Jessner",
+    "license": "MIT",
+    "engines": {
+        "node": ">=20"
+    },
+    "os": [
+        "darwin"
+    ],
+    "dependencies": {
+        "uiohook-napi": "^1.5.5"
+    }
+}
