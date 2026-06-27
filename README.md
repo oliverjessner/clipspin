@@ -1,6 +1,8 @@
 # ClipSpin
 
-ClipSpin ist ein temporärer macOS-Clipboard-Cycler. Du gibst eine JSON-Liste mit Texten an; bei jedem `Cmd+V` wird der aktuelle Text eingefügt und direkt danach der nächste vorbereitet.
+- cycle your paste queue with every CMD+V.
+
+Du startest Clipspin im Terminal mit einer JSON-Liste aus Texten. Solange der Command läuft, reagiert ClipSpin auf `Cmd+V`: Beim ersten Einfügen wird der erste Text aus der Liste verwendet, beim nächsten `Cmd+V` der zweite, danach der dritte und so weiter. Am Ende der Liste springt ClipSpin wieder zurück zum Anfang.
 
 ## Installation
 
@@ -36,8 +38,6 @@ cat snippets.json | clipspin
 ["Erster Text", "Zweiter Text", "Dritter Text"]
 ```
 
-Nach dem Start liegt der erste Eintrag in der Zwischenablage. Mit jedem `Cmd+V` wird der nächste Eintrag vorbereitet; nach dem letzten beginnt ClipSpin wieder von vorne.
-
 Stoppen kannst du ClipSpin mit `Ctrl+C` im Terminal. Die vorherige Zwischenablage wird danach wiederhergestellt.
 
 Wenn `Cmd+V` nicht erkannt wird, starte ClipSpin im Debug-Modus:
@@ -47,20 +47,3 @@ clipspin --debug '["Erster Text", "Zweiter Text"]'
 ```
 
 Beim Drücken von Tasten sollten dann `[debug]`-Zeilen erscheinen. Wenn keine erscheinen, fehlen macOS-Berechtigungen für die Terminal-App.
-
-## Veröffentlichen
-
-Vor dem Publish die Version in `package.json` erhöhen. Danach:
-
-```bash
-npm run publish:npm
-npm run publish:brew
-```
-
-Oder beides nacheinander:
-
-```bash
-npm run publish:all
-```
-
-`publish:brew` erwartet, dass die npm-Version bereits veröffentlicht ist. Der Befehl aktualisiert `oliverjessner/tap/clipspin`, setzt die npm-Tarball-URL samt SHA256, führt Homebrew-Checks aus, committet die Formula und pusht den Tap.

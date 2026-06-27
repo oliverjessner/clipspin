@@ -1,6 +1,6 @@
 {
     "name": "clipspin",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "description": "A temporary macOS clipboard cycler CLI that iterates through JSON text snippets on every Cmd+V.",
     "type": "module",
     "bin": {
