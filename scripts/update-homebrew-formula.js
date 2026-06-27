@@ -40,8 +40,6 @@ function getTapDir() {
 }
 
 function ensureCleanGitRepo(repoDir) {
-    runVisible('git', ['pull', '--ff-only'], { cwd: repoDir });
-
     const status = run('git', ['status', '--porcelain'], { cwd: repoDir }).trim();
 
     if (status) {
@@ -49,6 +47,8 @@ function ensureCleanGitRepo(repoDir) {
         console.error(status);
         process.exit(1);
     }
+
+    runVisible('git', ['pull', '--ff-only'], { cwd: repoDir });
 }
 
 function getPublishedTarballUrl() {
@@ -109,9 +109,10 @@ function commitAndPush(tapDir) {
 
 const tapDir = getTapDir();
 const formulaPath = path.join(tapDir, 'Formula', `${formulaName}.rb`);
+ensureCleanGitRepo(tapDir);
+
 const tarballUrl = getPublishedTarballUrl();
 const sha256 = getSha256(tarballUrl);
 
-ensureCleanGitRepo(tapDir);
 updateFormula(formulaPath, tarballUrl, sha256);
 commitAndPush(tapDir);

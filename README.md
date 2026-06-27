@@ -47,3 +47,20 @@ clipspin --debug '["Erster Text", "Zweiter Text"]'
 ```
 
 Beim Drücken von Tasten sollten dann `[debug]`-Zeilen erscheinen. Wenn keine erscheinen, fehlen macOS-Berechtigungen für die Terminal-App.
+
+## Veröffentlichen
+
+Vor dem Publish die Version in `package.json` erhöhen. Danach:
+
+```bash
+npm run publish:npm
+npm run publish:brew
+```
+
+Oder beides nacheinander:
+
+```bash
+npm run publish:all
+```
+
+`publish:brew` erwartet, dass die npm-Version bereits veröffentlicht ist. Der Befehl aktualisiert `oliverjessner/tap/clipspin`, setzt die npm-Tarball-URL samt SHA256, führt Homebrew-Checks aus, committet die Formula und pusht den Tap.
