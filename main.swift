@@ -2,6 +2,8 @@ import Foundation
 import CoreGraphics
 import ApplicationServices
 
+let version: [String] = "0.1.7"
+
 final class ClipSpinState {
     let items: [String]
     var index: Int = 0
@@ -222,7 +224,7 @@ CFRunLoopAddSource(
 
 CGEvent.tapEnable(tap: eventTap, enable: true)
 
-print("ClipSpin active.")
+print("ClipSpin v\(version) active.")
 print("Loaded \(items.count) items.")
 print("Press Option+V to type/cycle.")
 print("Press Ctrl+C to stop.")
