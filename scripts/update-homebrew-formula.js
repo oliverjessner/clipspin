@@ -5,10 +5,11 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 const tapName = 'oliverjessner/tap';
 const formulaName = 'clipspin';
-const rootDir = path.resolve(new URL('..', import.meta.url).pathname);
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
 
 function run(command, args, options = {}) {

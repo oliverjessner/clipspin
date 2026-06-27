@@ -1,11 +1,15 @@
 {
     "name": "clipspin",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "A temporary macOS clipboard cycler CLI that iterates through JSON text snippets on every Cmd+V.",
     "type": "module",
     "bin": {
-        "clipspin": "./index.js"
+        "clipspin": "index.js"
     },
+    "files": [
+        "index.js",
+        "README.md"
+    ],
     "scripts": {
         "start": "node index.js",
         "dev": "node index.js",
@@ -13,7 +17,7 @@
         "prepublishOnly": "npm run lint",
         "publish:npm": "npm publish --access public",
         "publish:brew": "node scripts/update-homebrew-formula.js",
-        "publish": "npm run publish:npm && npm run publish:brew"
+        "publish:all": "npm run publish:npm && npm run publish:brew"
     },
     "keywords": [
         "clipboard",
