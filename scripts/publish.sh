@@ -7,15 +7,19 @@ FORMULA_CLASS="Clipspin"
 
 GITHUB_USER="oliverjessner"
 SOURCE_REPO="${GITHUB_USER}/${APP_NAME}"
-TAP_REPO_URL="git@github.com:${GITHUB_USER}/homebrew-tap.git"
+TAP_REPO_URL="https://github.com/${GITHUB_USER}/homebrew-tap.git"
 
-TAP_DIR="${TAP_DIR:-$HOME/dev/homebrew-tap}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+WORKSPACE_DIR="$(cd "${APP_DIR}/.." && pwd)"
+
+TAP_DIR="${TAP_DIR:-${WORKSPACE_DIR}/homebrew-tap}"
 
 VERSION="${1:-}"
 
 if [[ -z "$VERSION" ]]; then
-  echo "Usage: ./publish-homebrew.sh <version>"
-  echo "Example: ./publish-homebrew.sh 0.1.0"
+  echo "Usage: ./scripts/publish.sh <version>"
+  echo "Example: ./scripts/publish.sh 0.1.6"
   exit 1
 fi
 
@@ -24,6 +28,8 @@ TARBALL_URL="https://github.com/${SOURCE_REPO}/archive/refs/tags/${TAG}.tar.gz"
 
 echo "Publishing ${APP_NAME} ${TAG} to ${GITHUB_USER}/homebrew-tap"
 echo ""
+
+cd "${APP_DIR}"
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "Error: Run this script from inside the ${APP_NAME} git repository."
@@ -37,7 +43,11 @@ fi
 
 CURRENT_BRANCH="$(git branch --show-current)"
 
+echo "App repo: ${APP_DIR}"
+echo "Tap repo: ${TAP_DIR}"
 echo "Current branch: ${CURRENT_BRANCH}"
+echo ""
+
 echo "Creating git tag if needed..."
 
 if git rev-parse "${TAG}" >/dev/null 2>&1; then
@@ -48,13 +58,14 @@ fi
 
 echo "Pushing branch and tag..."
 git push origin "${CURRENT_BRANCH}"
-git push origin "${TAG}"
+git push origin "${TAG}" || true
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 TARBALL_PATH="${TMP_DIR}/${APP_NAME}-${TAG}.tar.gz"
 
+echo ""
 echo "Downloading release tarball..."
 curl -L "${TARBALL_URL}" -o "${TARBALL_PATH}"
 
@@ -65,12 +76,21 @@ echo "SHA256: ${SHA256}"
 echo ""
 
 if [[ ! -d "${TAP_DIR}/.git" ]]; then
-  echo "Cloning tap repo into ${TAP_DIR}..."
+  echo "Tap repo not found at ${TAP_DIR}"
+  echo "Cloning tap repo..."
   mkdir -p "$(dirname "${TAP_DIR}")"
   git clone "${TAP_REPO_URL}" "${TAP_DIR}"
 else
-  echo "Updating tap repo..."
+  echo "Updating tap repo at ${TAP_DIR}..."
+  git -C "${TAP_DIR}" remote set-url origin "${TAP_REPO_URL}"
   git -C "${TAP_DIR}" pull --rebase
+fi
+
+if [[ -n "$(git -C "${TAP_DIR}" status --porcelain)" ]]; then
+  echo "Error: Tap repo has uncommitted changes."
+  echo "Commit, stash, or clean changes in:"
+  echo "  ${TAP_DIR}"
+  exit 1
 fi
 
 FORMULA_DIR="${TAP_DIR}/Formula"
@@ -78,6 +98,7 @@ FORMULA_PATH="${FORMULA_DIR}/${FORMULA_NAME}.rb"
 
 mkdir -p "${FORMULA_DIR}"
 
+echo ""
 echo "Writing formula: ${FORMULA_PATH}"
 
 cat > "${FORMULA_PATH}" <<EOF
@@ -106,6 +127,7 @@ class ${FORMULA_CLASS} < Formula
 end
 EOF
 
+echo ""
 echo "Formula content:"
 echo ""
 cat "${FORMULA_PATH}"
@@ -114,13 +136,16 @@ echo ""
 echo "Running brew audit..."
 brew audit --strict --online "${FORMULA_PATH}" || true
 
+echo ""
 echo "Running brew install test from local formula..."
 brew uninstall "${APP_NAME}" >/dev/null 2>&1 || true
 brew install --build-from-source "${FORMULA_PATH}"
 
+echo ""
 echo "Testing installed binary..."
 "${APP_NAME}" 2>/dev/null || true
 
+echo ""
 echo "Committing formula update..."
 git -C "${TAP_DIR}" add "${FORMULA_PATH}"
 

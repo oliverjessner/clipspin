@@ -109,3 +109,10 @@ After changing permissions, restart the terminal and start ClipSpin again.
 ClipSpin is currently macOS-only.
 
 It is designed for temporary paste queues, for example when you need to insert a fixed list of snippets one after another without constantly switching back to your clipboard manager.
+
+### Publish
+
+```
+# replace 0.1.6 with new version
+./scripts/publish.sh 0.1.6
+```
