@@ -7,6 +7,7 @@ FORMULA_CLASS="Clipspin"
 
 GITHUB_USER="oliverjessner"
 SOURCE_REPO="${GITHUB_USER}/${APP_NAME}"
+TAP_NAME="${GITHUB_USER}/tap"
 TAP_REPO_URL="https://github.com/${GITHUB_USER}/homebrew-tap.git"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,7 +20,7 @@ VERSION="${1:-}"
 
 if [[ -z "$VERSION" ]]; then
   echo "Usage: ./scripts/publish.sh <version>"
-  echo "Example: ./scripts/publish.sh 0.1.6"
+  echo "Example: ./scripts/publish.sh 0.1.7"
   exit 1
 fi
 
@@ -133,19 +134,6 @@ echo ""
 cat "${FORMULA_PATH}"
 echo ""
 
-echo "Running brew audit..."
-brew audit --strict --online "${FORMULA_PATH}" || true
-
-echo ""
-echo "Running brew install test from local formula..."
-brew uninstall "${APP_NAME}" >/dev/null 2>&1 || true
-brew install --build-from-source "${FORMULA_PATH}"
-
-echo ""
-echo "Testing installed binary..."
-"${APP_NAME}" 2>/dev/null || true
-
-echo ""
 echo "Committing formula update..."
 git -C "${TAP_DIR}" add "${FORMULA_PATH}"
 
@@ -157,7 +145,25 @@ else
 fi
 
 echo ""
+echo "Registering/updating Homebrew tap..."
+brew tap "${TAP_NAME}" "${TAP_REPO_URL}" >/dev/null 2>&1 || true
+brew update >/dev/null 2>&1 || true
+
+echo ""
+echo "Running brew audit..."
+brew audit --strict --online "${TAP_NAME}/${FORMULA_NAME}" || true
+
+echo ""
+echo "Running brew install test from tap..."
+brew uninstall "${FORMULA_NAME}" >/dev/null 2>&1 || true
+brew install --build-from-source "${TAP_NAME}/${FORMULA_NAME}"
+
+echo ""
+echo "Testing installed binary..."
+"${FORMULA_NAME}" 2>/dev/null || true
+
+echo ""
 echo "Done."
 echo ""
 echo "Users can now install with:"
-echo "  brew install ${GITHUB_USER}/tap/${FORMULA_NAME}"
+echo "  brew install ${TAP_NAME}/${FORMULA_NAME}"
