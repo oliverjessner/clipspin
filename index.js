@@ -126,6 +126,7 @@ const items = parseItems(rawInput);
 
 let index = 0;
 let lastPasteAt = 0;
+let commandDown = false;
 let pendingPaste = false;
 let pasteFallbackTimer = null;
 const originalClipboard = getClipboard();
@@ -177,8 +178,12 @@ console.log('paste-cycle active.');
 console.log('Press Cmd + V anywhere to paste/cycle.');
 console.log('Press Ctrl + C here to stop.\n');
 
-function isVKey(event) {
-    return event.keycode === UiohookKey.V;
+function isCommandKey(event) {
+    return event.keycode === UiohookKey.Meta || event.keycode === UiohookKey.MetaRight;
+}
+
+function isPasteKey(event) {
+    return event.keycode === UiohookKey.V || event.keycode === 9;
 }
 
 function logKeyEvent(name, event) {
@@ -187,14 +192,18 @@ function logKeyEvent(name, event) {
     }
 
     console.log(
-        `[debug] ${name}: keycode=${event.keycode} meta=${event.metaKey} ctrl=${event.ctrlKey} alt=${event.altKey} shift=${event.shiftKey}`,
+        `[debug] ${name}: keycode=${event.keycode} meta=${event.metaKey} commandDown=${commandDown} ctrl=${event.ctrlKey} alt=${event.altKey} shift=${event.shiftKey}`,
     );
 }
 
 uIOhook.on('keydown', event => {
     logKeyEvent('keydown', event);
 
-    const isCommandV = event.metaKey === true && isVKey(event);
+    if (isCommandKey(event)) {
+        commandDown = true;
+    }
+
+    const isCommandV = (event.metaKey === true || commandDown) && isPasteKey(event);
 
     if (!isCommandV) {
         return;
@@ -228,12 +237,16 @@ uIOhook.on('keydown', event => {
 uIOhook.on('keyup', event => {
     logKeyEvent('keyup', event);
 
-    if (!pendingPaste || !isVKey(event)) {
-        return;
+    const shouldAdvance = pendingPaste;
+
+    if (isCommandKey(event)) {
+        commandDown = false;
     }
 
-    // Let the application finish handling Cmd+V before replacing the clipboard.
-    advanceAfterPaste(80);
+    if (shouldAdvance) {
+        // Let the application finish handling Cmd+V before replacing the clipboard.
+        advanceAfterPaste(80);
+    }
 });
 
 try {
