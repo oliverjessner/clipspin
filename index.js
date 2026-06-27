@@ -115,10 +115,10 @@ const { debug, inputArgs } = parseArgs();
 const rawInput = await getInput(inputArgs);
 
 if (!rawInput) {
-    console.error('Usage: node index.js \'["A", "B", "C"]\'');
-    console.error('Debug: node index.js --debug \'["A", "B", "C"]\'');
-    console.error('   or: cat snippets.json | node index.js');
-    console.error('   or: node index.js snippets.json');
+    console.error('Usage: clipspin \'["A", "B", "C"]\'');
+    console.error('Debug: clipspin --debug \'["A", "B", "C"]\'');
+    console.error('   or: cat snippets.json | clipspin');
+    console.error('   or: clipspin snippets.json');
     process.exit(1);
 }
 
