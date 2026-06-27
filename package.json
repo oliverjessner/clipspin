@@ -17,7 +17,7 @@
         "prepublishOnly": "npm run lint",
         "publish:npm": "npm publish --access public",
         "publish:brew": "node scripts/update-homebrew-formula.js",
-        "publish:all": "npm run publish:npm && npm run publish:brew"
+        "publish": "npm run publish:npm && npm run publish:brew"
     },
     "keywords": [
         "clipboard",
