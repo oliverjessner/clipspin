@@ -2,7 +2,7 @@ import Foundation
 import CoreGraphics
 import ApplicationServices
 
-let version = "0.1.8"
+let version = "0.1.9"
 
 final class ClipSpinState {
     let items: [String]
