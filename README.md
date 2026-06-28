@@ -113,6 +113,6 @@ It is designed for temporary paste queues, for example when you need to insert a
 ### Publish
 
 ```
-# replace 0.1.6 with new version
-./scripts/publish.sh 0.1.6
+# replace 0.1.8 with the next version
+./scripts/publish.sh 0.1.8
 ```

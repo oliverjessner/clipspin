@@ -43,12 +43,35 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 CURRENT_BRANCH="$(git branch --show-current)"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
 
 echo "App repo: ${APP_DIR}"
 echo "Tap repo: ${TAP_DIR}"
 echo "Current branch: ${CURRENT_BRANCH}"
 echo ""
 
+echo "Validating release build..."
+
+if [[ -f "main.swift" ]]; then
+  VERSION_REGEX="${VERSION//./\\.}"
+
+  if ! grep -Eq "let[[:space:]]+version([[:space:]]*:[[:space:]]*String)?[[:space:]]*=[[:space:]]*\"${VERSION_REGEX}\"" main.swift; then
+    echo "Error: main.swift version does not match ${VERSION}."
+    echo "Expected a line like:"
+    echo "  let version = \"${VERSION}\""
+    exit 1
+  fi
+
+  swiftc main.swift -o "${TMP_DIR}/${APP_NAME}-build-check"
+elif [[ -f "Package.swift" ]]; then
+  swift build --configuration release --disable-sandbox
+else
+  echo "Error: No main.swift or Package.swift found."
+  exit 1
+fi
+
+echo ""
 echo "Creating git tag if needed..."
 
 if git rev-parse "${TAG}" >/dev/null 2>&1; then
@@ -60,9 +83,6 @@ fi
 echo "Pushing branch and tag..."
 git push origin "${CURRENT_BRANCH}"
 git push origin "${TAG}" || true
-
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
 
 TARBALL_PATH="${TMP_DIR}/${APP_NAME}-${TAG}.tar.gz"
 
