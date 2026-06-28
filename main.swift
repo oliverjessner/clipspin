@@ -2,7 +2,7 @@ import Foundation
 import CoreGraphics
 import ApplicationServices
 
-let version = "0.1.9"
+let version = "0.1.10"
 
 final class ClipSpinState {
     let items: [String]
@@ -72,12 +72,38 @@ final class ClipSpinState {
 let virtualKeyV: Int64 = 9
 var state: ClipSpinState?
 var eventTap: CFMachPort?
+var debugEnabled = false
 
-func parseInput() -> [String] {
+struct ClipSpinOptions {
+    let items: [String]
+    let debug: Bool
+}
+
+func printUsage(to stream: UnsafeMutablePointer<FILE>) {
+    fputs("Usage: clipspin '[\"Erster Text\", \"Zweiter Text\", \"Dritter Text\"]'\n", stream)
+    fputs("   or: clipspin snippets.json\n", stream)
+    fputs("Debug: clipspin --debug snippets.json\n", stream)
+}
+
+func parseInput() -> ClipSpinOptions {
     let args = CommandLine.arguments.dropFirst()
+    var debug = false
+    var inputArgs: [String] = []
 
-    guard let raw = args.first else {
-        fputs("Usage: clipspin '[\"Erster Text\", \"Zweiter Text\", \"Dritter Text\"]'\n", stderr)
+    for arg in args {
+        switch arg {
+        case "--debug", "-d":
+            debug = true
+        case "--help", "-h":
+            printUsage(to: stdout)
+            exit(0)
+        default:
+            inputArgs.append(String(arg))
+        }
+    }
+
+    guard let raw = inputArgs.first, inputArgs.count == 1 else {
+        printUsage(to: stderr)
         exit(1)
     }
 
@@ -107,7 +133,7 @@ func parseInput() -> [String] {
             exit(1)
         }
 
-        return decoded
+        return ClipSpinOptions(items: decoded, debug: debug)
     } catch {
         fputs("Invalid JSON. Expected: [\"Text 1\", \"Text 2\", \"Text 3\"]\n", stderr)
         exit(1)
@@ -143,6 +169,55 @@ func isOptionV(_ event: CGEvent) -> Bool {
         && !hasControl
 }
 
+func eventTypeName(_ type: CGEventType) -> String {
+    switch type {
+    case .keyDown:
+        return "keyDown"
+    case .keyUp:
+        return "keyUp"
+    case .flagsChanged:
+        return "flagsChanged"
+    default:
+        return "event(\(type.rawValue))"
+    }
+}
+
+func flagNames(_ flags: CGEventFlags) -> String {
+    var names: [String] = []
+
+    if flags.contains(.maskAlternate) {
+        names.append("option")
+    }
+
+    if flags.contains(.maskCommand) {
+        names.append("command")
+    }
+
+    if flags.contains(.maskControl) {
+        names.append("control")
+    }
+
+    if flags.contains(.maskShift) {
+        names.append("shift")
+    }
+
+    if flags.contains(.maskSecondaryFn) {
+        names.append("fn")
+    }
+
+    return names.isEmpty ? "-" : names.joined(separator: ",")
+}
+
+func logEvent(_ type: CGEventType, _ event: CGEvent) {
+    guard debugEnabled else {
+        return
+    }
+
+    let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+    print("[debug] \(eventTypeName(type)): keyCode=\(keyCode) flags=\(flagNames(event.flags))")
+    fflush(stdout)
+}
+
 let callback: CGEventTapCallBack = { proxy, type, event, userInfo in
     if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
         if let tap = eventTap {
@@ -151,6 +226,8 @@ let callback: CGEventTapCallBack = { proxy, type, event, userInfo in
 
         return Unmanaged.passUnretained(event)
     }
+
+    logEvent(type, event)
 
     guard type == .keyDown || type == .keyUp else {
         return Unmanaged.passUnretained(event)
@@ -164,6 +241,11 @@ let callback: CGEventTapCallBack = { proxy, type, event, userInfo in
         state.suppressNextVKeyUp = true
 
         DispatchQueue.main.async {
+            if debugEnabled {
+                print("[debug] Option+V detected.")
+                fflush(stdout)
+            }
+
             state.typeNext()
         }
 
@@ -185,8 +267,9 @@ let callback: CGEventTapCallBack = { proxy, type, event, userInfo in
     return Unmanaged.passUnretained(event)
 }
 
-let items = parseInput()
-state = ClipSpinState(items: items)
+let options = parseInput()
+debugEnabled = options.debug
+state = ClipSpinState(items: options.items)
 
 requestAccessibilityIfNeeded()
 
@@ -225,10 +308,14 @@ CFRunLoopAddSource(
 CGEvent.tapEnable(tap: eventTap, enable: true)
 
 print("ClipSpin v\(version) active.")
-print("Loaded \(items.count) items.")
+print("Loaded \(options.items.count) items.")
 print("Press Option+V to type/cycle.")
 print("Press Ctrl+C to stop.")
+if debugEnabled {
+    print("Debug mode enabled.")
+}
 print("")
+fflush(stdout)
 
 signal(SIGINT) { _ in
     print("\nClipSpin stopped.")

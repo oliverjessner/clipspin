@@ -34,6 +34,12 @@ From a file:
 clipspin snippets.json
 ```
 
+Debug mode:
+
+```bash
+clipspin --debug snippets.json
+```
+
 `snippets.json` must contain a JSON array of strings:
 
 ```json
